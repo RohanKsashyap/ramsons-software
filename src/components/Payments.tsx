@@ -32,9 +32,9 @@ export const Payments: React.FC = () => {
   }, []);
 
   const filteredPayments = payments.filter(payment => {
-    const customerName = payment.customer?.name || 
-                        (typeof payment.customerId === 'object' ? payment.customerId.name : null) || 
-                        payment.customerName || 
+    const customerName = payment.customer?.name ||
+                        (payment.customerId && typeof payment.customerId === 'object' && (payment.customerId as any)?.name ? (payment.customerId as any).name : null) ||
+                        payment.customerName ||
                         '';
     const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          payment.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -141,9 +141,9 @@ export const Payments: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {payment.customer?.name || 
-                         (typeof payment.customerId === 'object' ? payment.customerId.name : null) || 
-                         payment.customerName || 
+                        {payment.customer?.name ||
+                         (payment.customerId && typeof payment.customerId === 'object' && (payment.customerId as any)?.name ? (payment.customerId as any).name : null) ||
+                         payment.customerName ||
                          'N/A'}
                       </div>
                       <div className="text-sm text-gray-500">

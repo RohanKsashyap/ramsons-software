@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, Search, Filter, Plus } from 'lucide-react';
+import { IndianRupee, Search, Filter, Plus, Trash2, Edit, Eye } from 'lucide-react';
 import type { Transaction } from '../types';
 import { apiService } from '../services/api';
 import TransactionForm from './TransactionForm';
@@ -10,8 +10,10 @@ export const Transactions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [showForm, setShowForm] = useState(false);
-  
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     // Check URL parameters for action=new
@@ -42,13 +44,83 @@ export const Transactions: React.FC = () => {
     fetchTransactions();
   }, []);
 
-  const filteredTransactions = transactions.filter(transaction => {
+  const handleSelectTransaction = (transactionId: string) => {
+    setSelectedTransactions(prev => 
+      prev.includes(transactionId) 
+        ? prev.filter(id => id !== transactionId)
+        : [...prev, transactionId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTransactions.length === filteredTransactions.length) {
+      setSelectedTransactions([]);
+    } else {
+      setSelectedTransactions(filteredTransactions.map(t => t._id || t.id).filter(id => id));
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      setDeleting(true);
+      await apiService.transactions.delete(transactionId);
+      // Dispatch custom event to notify other components to refresh data
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'transaction', action: 'delete' } }));
+      // Refresh the transactions list
+      const fetchTransactions = async () => {
+        try {
+          const response: any = await apiService.transactions.getAll();
+          if (response && response.success) {
+            setTransactions(response.data);
+          }
+        } catch (error) {
+          console.error('Error refreshing transactions:', error);
+        }
+      };
+      await fetchTransactions();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      alert('Failed to delete transaction');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteMultiple = async () => {
+    try {
+      setDeleting(true);
+      await apiService.transactions.deleteMultiple(selectedTransactions);
+      setSelectedTransactions([]);
+      setShowDeleteConfirm(false);
+      // Dispatch custom event to notify other components to refresh data
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'transaction', action: 'delete', count: selectedTransactions.length } }));
+      // Refresh the transactions list
+      const fetchTransactions = async () => {
+        try {
+          const response: any = await apiService.transactions.getAll();
+          if (response && response.success) {
+            setTransactions(response.data);
+          }
+        } catch (error) {
+          console.error('Error refreshing transactions:', error);
+        }
+      };
+      await fetchTransactions();
+    } catch (error) {
+      console.error('Error deleting transactions:', error);
+      alert('Failed to delete transactions');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const filteredTransactions = (transactions || []).filter(transaction => {
     const customerName = transaction.customer?.name || 
-                        (typeof transaction.customerId === 'object' ? transaction.customerId.name : null) || 
+                        (typeof transaction.customerId === 'object' && transaction.customerId ? transaction.customerId.name : null) || 
                         transaction.customerName || 
                         '';
     const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                         (transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     
     const matchesFilter = filterStatus === 'ALL' || transaction.status === filterStatus;
     
@@ -107,6 +179,17 @@ export const Transactions: React.FC = () => {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+
+          {selectedTransactions.length > 0 && (
+            <button 
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              disabled={deleting}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete ({selectedTransactions.length})
+            </button>
+          )}
           
           <button 
             onClick={() => setShowForm(true)}
@@ -123,6 +206,14 @@ export const Transactions: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={selectedTransactions.length === filteredTransactions.length && filteredTransactions.length > 0}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Customer
                 </th>
@@ -148,15 +239,26 @@ export const Transactions: React.FC = () => {
                 filteredTransactions.map((transaction) => (
                   <tr key={transaction._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedTransactions.includes(transaction._id || transaction.id)}
+                        onChange={() => {
+                          const id = transaction._id || transaction.id;
+                          if (id) handleSelectTransaction(id);
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {transaction.customer?.name || 
-                         (typeof transaction.customerId === 'object' ? transaction.customerId.name : null) || 
+                         (typeof transaction.customerId === 'object' && transaction.customerId ? transaction.customerId.name : null) || 
                          transaction.customerName || 
                          'N/A'}
                       </div>
                       <div className="text-sm text-gray-500">
                         {transaction.customer?.phone || 
-                         (typeof transaction.customerId === 'object' ? transaction.customerId.phone : null) || 
+                         (typeof transaction.customerId === 'object' && transaction.customerId ? transaction.customerId.phone : null) || 
                          ''}
                       </div>
                     </td>
@@ -188,22 +290,39 @@ export const Transactions: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button className="text-blue-600 hover:text-blue-800 mr-3">View</button>
-                      <button 
-                        onClick={() => {
-                          setEditingTransaction(transaction);
-                          setShowForm(true);
-                        }} 
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
+                      <div className="flex gap-2">
+                        <button className="flex items-center gap-1 text-blue-600 hover:text-blue-800">
+                          <Eye className="h-4 w-4" />
+                          View
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingTransaction(transaction);
+                            setShowForm(true);
+                          }} 
+                          className="flex items-center gap-1 text-green-600 hover:text-green-800"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const id = transaction._id || transaction.id;
+                            if (id) handleDeleteTransaction(id);
+                          }}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-800"
+                          disabled={deleting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
                     No transactions found
                   </td>
                 </tr>
@@ -221,6 +340,37 @@ export const Transactions: React.FC = () => {
             setEditingTransaction(null);
           }}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Delete Transactions
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete {selectedTransactions.length} transaction(s)? 
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteMultiple}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

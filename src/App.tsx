@@ -10,8 +10,27 @@ import { Reports } from './components/Reports';
 import { Calculator as CalculatorComponent } from './components/Calculator';
 import { Payments } from './components/Payments';
 import { Setting } from './components/Setting';
+import { NotificationManager } from './components/NotificationManager';
+import { dueDateNotificationService } from './services/dueDateNotificationService';
+import { backgroundNotificationService } from './services/backgroundNotificationService';
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Initialize notification services
+  useEffect(() => {
+    // Initialize due date notification service
+    console.log('Initializing due date notification service...');
+    
+    // Initialize background notification service
+    console.log('Initializing background notification service...');
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('Notification permission:', permission);
+      });
+    }
+  }, []);
 
   // Handle URL hash navigation
   useEffect(() => {
@@ -133,6 +152,9 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Notification Manager */}
+      <NotificationManager maxNotifications={5} position="top-right" />
     </div>
   );
 }

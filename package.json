@@ -8,12 +8,13 @@
   "homepage": "./",
   "scripts": {
     "dev": "vite",
-    "server": "node server/index.js",
+    "server": "node server/index.cjs",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "npm run build && npm run server"
+    "start": "npm run build && npm run server",
+    "generate-sounds": "node scripts/generate-sounds.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

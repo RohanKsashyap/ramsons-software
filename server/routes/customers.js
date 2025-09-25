@@ -52,4 +52,25 @@ router.get('/search/:searchTerm', async (req, res) => {
   }
 });
 
+// Delete multiple customers (must be before /:id route)
+router.delete('/bulk', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    const result = await customerService.deleteMultipleCustomers(ids);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get customer by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const customer = await customerService.getCustomerById(req.params.id);
+    res.json(customer);
+  } catch (error) {
+    res.status(404).json({ error: error.message });
+  }
+});
+
 module.exports = router;

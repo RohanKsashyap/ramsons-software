@@ -31,6 +31,14 @@ const NotificationRule = sequelize.define('NotificationRule', {
     type: DataTypes.JSON,
     defaultValue: { notification: true },
   },
+  sound: {
+    type: DataTypes.JSON,
+    defaultValue: {
+      enabled: true,
+      type: 'notification',
+      volume: 0.7
+    },
+  },
   schedule: {
     type: DataTypes.JSON,
     allowNull: false,

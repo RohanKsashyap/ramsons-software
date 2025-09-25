@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Edit2, Trash2, Play, Clock, Users, AlertCircle } from 'lucide-react';
+import { Bell, Plus, Edit2, Trash2, Play, Clock, Users, AlertCircle, Volume2, VolumeX, Settings, RefreshCw } from 'lucide-react';
 import { apiService } from '../services/api';
+import { audioService } from '../services/audioService';
+import { backgroundNotificationService } from '../services/backgroundNotificationService';
 import type { NotificationRule } from '../types';
 
 export const NotificationSettings: React.FC = () => {
@@ -8,9 +10,14 @@ export const NotificationSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingRule, setEditingRule] = useState<NotificationRule | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [volume, setVolume] = useState(0.7);
 
   useEffect(() => {
     fetchRules();
+    // Initialize audio service settings
+    setSoundEnabled(audioService.isSoundEnabled());
+    setVolume(audioService.getVolume());
   }, []);
 
   const fetchRules = async () => {
@@ -47,9 +54,51 @@ export const NotificationSettings: React.FC = () => {
   const handleTestRule = async (ruleId: string) => {
     try {
       const result = await apiService.notifications.testRule(ruleId);
-      alert(result.message);
+      
+      // Find the rule to get sound settings
+      const rule = rules.find(r => r.id === ruleId);
+      
+      // Play sound based on rule settings
+      if (rule && rule.sound?.enabled) {
+        await audioService.playNotificationSound(rule.sound.type, rule.sound.customUrl);
+      }
+      
+      // Show the test notification in the UI
+      if (result.notification && typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          ...result.notification,
+          silent: false // Ensure sound plays
+        });
+      } else {
+        // Fallback if notification object not returned
+        alert(result.message);
+      }
     } catch (error) {
       alert('Failed to test rule');
+    }
+  };
+
+  const handleSoundToggle = (enabled: boolean) => {
+    setSoundEnabled(enabled);
+    audioService.setEnabled(enabled);
+  };
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    audioService.setVolume(newVolume);
+  };
+
+  const handleTestSound = async (soundType: 'notification' | 'urgent' | 'reminder' = 'notification') => {
+    await audioService.playNotificationSound(soundType);
+  };
+
+  const handleManualCheck = async () => {
+    try {
+      await backgroundNotificationService.manualCheck();
+      alert('Manual notification check completed!');
+    } catch (error) {
+      console.error('Error during manual check:', error);
+      alert('Error during manual check. Check console for details.');
     }
   };
 
@@ -68,13 +117,97 @@ export const NotificationSettings: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Notification Settings</h2>
           <p className="text-gray-600 mt-1">Manage automated reminders and alerts</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Rule
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleManualCheck}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            title="Check for notifications now"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Check Now
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Rule
+          </button>
+        </div>
+      </div>
+
+      {/* Sound Controls */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Sound Settings
+          </h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Sound Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {soundEnabled ? <Volume2 className="h-5 w-5 text-green-600" /> : <VolumeX className="h-5 w-5 text-gray-400" />}
+              <span className="text-sm font-medium text-gray-700">Sound Notifications</span>
+            </div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={soundEnabled}
+                onChange={(e) => handleSoundToggle(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                soundEnabled ? 'bg-green-600' : 'bg-gray-200'
+              }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  soundEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </div>
+            </label>
+          </div>
+
+          {/* Volume Control */}
+          <div className="flex items-center gap-3">
+            <Volume2 className="h-5 w-5 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Volume</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={volume}
+              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+            <span className="text-sm text-gray-500 w-8">{Math.round(volume * 100)}%</span>
+          </div>
+
+          {/* Test Sounds */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Test:</span>
+            <button
+              onClick={() => handleTestSound('notification')}
+              className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+            >
+              Normal
+            </button>
+            <button
+              onClick={() => handleTestSound('urgent')}
+              className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+            >
+              Urgent
+            </button>
+            <button
+              onClick={() => handleTestSound('reminder')}
+              className="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+            >
+              Reminder
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Rules List */}
@@ -221,6 +354,10 @@ const NotificationRuleForm: React.FC<NotificationRuleFormProps> = ({ rule, onClo
     notification: rule?.actions.notification ?? true,
     email: rule?.actions.email ?? false,
     sms: rule?.actions.sms ?? false,
+    soundEnabled: rule?.sound?.enabled ?? true,
+    soundType: rule?.sound?.type || 'notification' as const,
+    soundCustomUrl: rule?.sound?.customUrl || '',
+    soundVolume: rule?.sound?.volume?.toString() || '0.7',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,6 +375,12 @@ const NotificationRuleForm: React.FC<NotificationRuleFormProps> = ({ rule, onClo
         notification: formData.notification,
         email: formData.email,
         sms: formData.sms,
+      },
+      sound: {
+        enabled: formData.soundEnabled,
+        type: formData.soundType,
+        ...(formData.soundType === 'custom' && formData.soundCustomUrl && { customUrl: formData.soundCustomUrl }),
+        volume: parseFloat(formData.soundVolume),
       },
       schedule: {
         frequency: formData.frequency,
@@ -424,6 +567,84 @@ const NotificationRuleForm: React.FC<NotificationRuleFormProps> = ({ rule, onClo
                 />
                 <span className="ml-2 text-sm text-gray-700">SMS (Coming Soon)</span>
               </label>
+            </div>
+          </div>
+
+          {/* Sound Settings */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Sound Settings
+            </label>
+            <div className="space-y-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.soundEnabled}
+                  onChange={(e) => setFormData({ ...formData, soundEnabled: e.target.checked })}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Enable Sound Notification</span>
+              </label>
+
+              {formData.soundEnabled && (
+                <div className="space-y-3 pl-6 border-l-2 border-gray-100">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sound Type
+                    </label>
+                    <select
+                      value={formData.soundType}
+                      onChange={(e) => setFormData({ ...formData, soundType: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="notification">Normal Notification</option>
+                      <option value="urgent">Urgent Alert</option>
+                      <option value="reminder">Reminder Sound</option>
+                      <option value="custom">Custom Sound</option>
+                    </select>
+                  </div>
+
+                  {formData.soundType === 'custom' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Sound URL
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.soundCustomUrl}
+                        onChange={(e) => setFormData({ ...formData, soundCustomUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="https://example.com/sound.mp3"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Volume: {Math.round(parseFloat(formData.soundVolume) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={formData.soundVolume}
+                      onChange={(e) => setFormData({ ...formData, soundVolume: e.target.value })}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => audioService.playNotificationSound(formData.soundType as any, formData.soundCustomUrl)}
+                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    >
+                      Test Sound
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

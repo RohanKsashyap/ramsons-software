@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTransactions, useCustomers } from '../hooks/useElectron';
 import type { Transaction, Customer } from '../types';
+import CustomerSelector from './CustomerSelector';
 
 interface TransactionFormProps {
   transaction?: Transaction;
@@ -22,19 +23,26 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, o
     dueDate: transaction?.dueDate ? new Date(transaction.dueDate).toISOString().split('T')[0] : '',
     status: transaction?.status || 'UNPAID'
   });
+  const [selectedCustomer, setSelectedCustomer] = useState<Partial<Customer> | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
+      // Map form data to API format
       const transactionData = {
-        ...formData,
+        customerId: formData.customerId,
+        type: formData.type === 'SALE' ? 'invoice' : 'payment',
         amount: parseFloat(formData.amount),
-        paidAmount: formData.type === 'PAYMENT' ? parseFloat(formData.amount) : 0,
-        remainingAmount: formData.type === 'PAYMENT' ? 0 : parseFloat(formData.amount),
+        status: formData.type === 'SALE'
+          ? (formData.status === 'PAID' ? 'completed' : 'pending')
+          : 'completed',
+        description: formData.description,
+        paymentMethod: formData.paymentMethod,
+        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : undefined,
       };
-      
+
       await createTransaction(transactionData);
       onClose();
     } catch (error) {
@@ -49,6 +57,14 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, o
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleCustomerChange = (customerId: string, customerData?: Partial<Customer>) => {
+    setFormData({
+      ...formData,
+      customerId: customerId,
+    });
+    setSelectedCustomer(customerData || null);
   };
 
   return (
@@ -71,21 +87,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, o
             <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-2">
               Customer *
             </label>
-            <select
-              id="customerId"
-              name="customerId"
-              required
+            <CustomerSelector
               value={formData.customerId}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select a customer</option>
-              {customers.map(customer => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name} - {customer.phone}
-                </option>
-              ))}
-            </select>
+              onChange={handleCustomerChange}
+              required
+              placeholder="Search or create customer"
+            />
           </div>
 
           <div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Phone, Mail, MapPin } from 'lucide-react';
+import { Search, Filter, Plus, Phone, Mail, MapPin, Trash2, Edit, Eye } from 'lucide-react';
 import type { Customer } from '../types';
 import { useCustomers } from '../hooks/useElectron';
 import { CustomerForm } from './CustomerForm';
+import { apiService } from '../services/api';
 
 export const Customers: React.FC = () => {
   const { customers, loading, error } = useCustomers();
@@ -10,6 +11,9 @@ export const Customers: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('name');
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     // Check URL parameters for action=new
@@ -17,6 +21,20 @@ export const Customers: React.FC = () => {
     if (urlParams.get('action') === 'new') {
       setShowForm(true);
     }
+
+    // Listen for data change events (e.g., when transactions are deleted)
+    const handleDataChanged = (event: CustomEvent) => {
+      if (event.detail?.type === 'transaction' && event.detail?.action === 'delete') {
+        // Refresh customer data when transactions are deleted
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
   }, []);
 
   const handleCloseForm = () => {
@@ -27,6 +45,56 @@ export const Customers: React.FC = () => {
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
     setShowForm(true);
+  };
+
+  const handleSelectCustomer = (customerId: string) => {
+    setSelectedCustomers(prev => 
+      prev.includes(customerId) 
+        ? prev.filter(id => id !== customerId)
+        : [...prev, customerId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCustomers.length === sortedCustomers.length) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(sortedCustomers.map(c => c.id));
+    }
+  };
+
+  const handleDeleteCustomer = async (customerId: string) => {
+    try {
+      setDeleting(true);
+      await apiService.customers.delete(customerId);
+      // Dispatch custom event to notify other components to refresh data
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'customer', action: 'delete' } }));
+      // Refresh the customers list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      alert('Failed to delete customer');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteMultiple = async () => {
+    try {
+      setDeleting(true);
+      await apiService.customers.deleteMultiple(selectedCustomers);
+      setSelectedCustomers([]);
+      setShowDeleteConfirm(false);
+      // Dispatch custom event to notify other components to refresh data
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'customer', action: 'delete', count: selectedCustomers.length } }));
+      // Refresh the customers list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting customers:', error);
+      alert('Failed to delete customers');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredCustomers = customers.filter(customer => {
@@ -82,6 +150,17 @@ export const Customers: React.FC = () => {
                 <option value="recent">Sort by Recent</option>
               </select>
             </div>
+
+            {selectedCustomers.length > 0 && (
+              <button 
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                disabled={deleting}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete ({selectedCustomers.length})
+              </button>
+            )}
             
             <button 
               onClick={() => setShowForm(true)}
@@ -97,7 +176,15 @@ export const Customers: React.FC = () => {
             sortedCustomers.map((customer) => (
               <div key={customer.id} className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow">
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">{customer.name}</h3>
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-800">{customer.name}</h3>
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.includes(customer.id)}
+                      onChange={() => handleSelectCustomer(customer.id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
                   
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center text-gray-600">
@@ -123,29 +210,45 @@ export const Customers: React.FC = () => {
                   <div className="pt-4 border-t border-gray-100">
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-gray-600">Total Credit:</span>
-                      <span className="text-sm font-medium">${customer.totalCredit.toFixed(2)}</span>
+                      <span className="text-sm font-medium">₹{customer.totalCredit.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-gray-600">Total Paid:</span>
-                      <span className="text-sm font-medium">${customer.totalPaid.toFixed(2)}</span>
+                      <span className="text-sm font-medium">₹{customer.totalPaid.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm font-medium">Balance:</span>
                       <span className={`text-sm font-bold ${customer.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        ${customer.balance.toFixed(2)}
+                        ₹{customer.balance.toFixed(2)}
                       </span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="bg-gray-50 px-6 py-3 flex justify-between">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleEditCustomer(customer)}
+                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </button>
+                    <button 
+                      onClick={() => handleEditCustomer(customer)}
+                      className="flex items-center gap-1 text-green-600 hover:text-green-800 text-sm font-medium"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </button>
+                  </div>
                   <button 
-                    onClick={() => handleEditCustomer(customer)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View Details
-                  </button>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    Add Transaction
+                    onClick={() => handleDeleteCustomer(customer.id)}
+                    className="flex items-center gap-1 text-red-600 hover:text-red-800 text-sm font-medium"
+                    disabled={deleting}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
                   </button>
                 </div>
               </div>
@@ -165,6 +268,37 @@ export const Customers: React.FC = () => {
           onClose={handleCloseForm}
           onSave={handleCloseForm}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Delete Customers
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete {selectedCustomers.length} customer(s)? 
+              This action cannot be undone and will also delete all associated transactions.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteMultiple}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

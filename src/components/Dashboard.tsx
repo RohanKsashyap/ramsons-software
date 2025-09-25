@@ -12,6 +12,9 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import DueDateAlerts from './DueDateAlerts';
+import NotificationTest from './NotificationTest';
+import CustomerCreationDemo from './CustomerCreationDemo';
 
 // Register ChartJS components
 ChartJS.register(
@@ -43,22 +46,20 @@ export const Dashboard: React.FC = () => {
         const dashboardResponse = await apiService.dashboard.getStats();
         
         if (dashboardResponse && dashboardResponse.data) {
-          const { 
-            totalCustomers, 
-            totalRevenue, 
-            totalOutstanding, 
-            recentTransactions: transactions 
+          const {
+            totalCustomers,
+            totalRevenue,
+            totalOutstanding,
+            overdueCount,
+            recentTransactions: transactions
           } = dashboardResponse.data;
-          
-          // Calculate overdue count (this could be added to the backend API in the future)
-          let overdueCount = 0;
-          
+
           // Set stats
           setStats({
             totalCustomers,
             totalSales: totalRevenue,
             totalOutstanding,
-            overdueCount
+            overdueCount: overdueCount || 0
           });
           
           // Set recent transactions
@@ -193,6 +194,15 @@ export const Dashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Due Date Alerts */}
+      <DueDateAlerts />
+
+      {/* Customer Creation Demo */}
+      <CustomerCreationDemo />
+
+      {/* Notification Test (for development) */}
+      <NotificationTest />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Transactions */}
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -203,9 +213,9 @@ export const Dashboard: React.FC = () => {
                 <div key={transaction._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-800">
-                      {transaction.customer?.name || 
-                       (typeof transaction.customerId === 'object' ? transaction.customerId.name : null) || 
-                       transaction.customerName || 
+                      {transaction.customer?.name ||
+                       (transaction.customerId && typeof transaction.customerId === 'object' && (transaction.customerId as any)?.name ? (transaction.customerId as any).name : null) ||
+                       transaction.customerName ||
                        'Unknown Customer'}
                     </p>
                     <p className="text-sm text-gray-600">{transaction.type}</p>

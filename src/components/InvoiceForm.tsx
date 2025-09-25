@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTransactions, useCustomers } from '../hooks/useElectron';
 import type { Transaction, Customer } from '../types';
+import CustomerSelector from './CustomerSelector';
 
 interface InvoiceFormProps {
   invoice?: Transaction;
@@ -13,13 +14,22 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
   const { customers } = useCustomers();
   const [loading, setLoading] = useState(false);
   
+  // Set default due date to 30 days from now
+  const getDefaultDueDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState({
     customerId: invoice?.customerId || '',
     amount: invoice?.amount?.toString() || '',
     description: invoice?.description || '',
     paymentMethod: invoice?.paymentMethod || 'credit',
+    dueDate: invoice?.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : getDefaultDueDate(),
     status: invoice?.status || 'pending'
   });
+  const [selectedCustomer, setSelectedCustomer] = useState<Partial<Customer> | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +58,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
     });
   };
 
+  const handleCustomerChange = (customerId: string, customerData?: Partial<Customer>) => {
+    setFormData({
+      ...formData,
+      customerId: customerId,
+    });
+    setSelectedCustomer(customerData || null);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -68,21 +86,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
             <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-2">
               Customer *
             </label>
-            <select
-              id="customerId"
-              name="customerId"
-              required
+            <CustomerSelector
               value={formData.customerId}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select a customer</option>
-              {customers.map(customer => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name} - {customer.phone}
-                </option>
-              ))}
-            </select>
+              onChange={handleCustomerChange}
+              required
+              placeholder="Search or create customer"
+            />
           </div>
 
           <div>
@@ -118,6 +127,22 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
               <option value="credit">Credit</option>
               <option value="cash">Cash</option>
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-2">
+              Due Date *
+            </label>
+            <input
+              type="date"
+              id="dueDate"
+              name="dueDate"
+              required
+              value={formData.dueDate}
+              onChange={handleChange}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
 
           <div>

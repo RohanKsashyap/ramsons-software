@@ -13,7 +13,14 @@ export const useCustomers = () => {
       const response = await apiService.customers.getAll();
       // Handle the API response structure which has data in a nested 'data' property
       const customersData = response.data || [];
-      setCustomers(customersData);
+      // Convert MongoDB _id to id for consistency and filter out null/invalid customers
+      const customersWithId = customersData
+        .filter((customer: any) => customer && customer._id)
+        .map((customer: any) => ({
+          ...customer,
+          id: customer._id
+        }));
+      setCustomers(customersWithId);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch customers');
@@ -59,7 +66,14 @@ export const useCustomers = () => {
       const response = await apiService.customers.search(searchTerm);
       // Handle the API response structure which has data in a nested 'data' property
       const customersData = response.data || [];
-      setCustomers(customersData);
+      // Convert MongoDB _id to id for consistency and filter out null/invalid customers
+      const customersWithId = customersData
+        .filter((customer: any) => customer && customer._id)
+        .map((customer: any) => ({
+          ...customer,
+          id: customer._id
+        }));
+      setCustomers(customersWithId);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search customers');
@@ -96,7 +110,14 @@ export const useTransactions = () => {
       const response = await apiService.transactions.getAll();
       // Handle the API response structure which has data in a nested 'data' property
       const transactionsData = response.data || [];
-      setTransactions(transactionsData);
+      // Convert MongoDB _id to id for consistency and filter out null/invalid transactions
+      const transactionsWithId = transactionsData
+        .filter((transaction: any) => transaction && transaction._id)
+        .map((transaction: any) => ({
+          ...transaction,
+          id: transaction._id
+        }));
+      setTransactions(transactionsWithId);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch transactions');

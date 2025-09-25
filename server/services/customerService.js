@@ -77,6 +77,56 @@ class CustomerService {
     }
   }
 
+  async getCustomerById(id) {
+    try {
+      const customer = await Customer.findByPk(id, {
+        include: [{
+          model: Transaction,
+          as: 'transactions',
+        }],
+      });
+      
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
+      
+      return customer;
+    } catch (error) {
+      throw new Error(`Error fetching customer: ${error.message}`);
+    }
+  }
+
+  async deleteMultipleCustomers(ids) {
+    try {
+      if (!Array.isArray(ids) || ids.length === 0) {
+        throw new Error('Invalid customer IDs provided');
+      }
+
+      // Check if customers exist
+      const customers = await Customer.findAll({
+        where: { id: ids },
+        attributes: ['id']
+      });
+
+      if (customers.length === 0) {
+        throw new Error('No customers found with provided IDs');
+      }
+
+      // Delete customers (this will cascade delete their transactions due to foreign key constraints)
+      const deletedCount = await Customer.destroy({
+        where: { id: ids }
+      });
+
+      return { 
+        success: true, 
+        deletedCount,
+        message: `Successfully deleted ${deletedCount} customer(s) and their associated transactions`
+      };
+    } catch (error) {
+      throw new Error(`Error deleting multiple customers: ${error.message}`);
+    }
+  }
+
   async updateCustomerBalance(customerId) {
     try {
       const customer = await Customer.findByPk(customerId, {

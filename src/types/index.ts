@@ -27,6 +27,12 @@ export interface NotificationRule {
     email?: boolean;
     sms?: boolean;
   };
+  sound: {
+    enabled: boolean;
+    type: 'notification' | 'urgent' | 'reminder' | 'custom';
+    customUrl?: string;
+    volume?: number;
+  };
   schedule: {
     frequency: 'daily' | 'weekly' | 'monthly';
     time: string; // HH:MM format
@@ -78,7 +84,8 @@ export interface Transaction {
   type: 'payment' | 'invoice' | 'customer' | 'credit' | 'debit';
   amount: number;
   date: string;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  dueDate?: string;
+  status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'paid' | 'unpaid' | 'partial' | 'overdue';
   description?: string;
   reference?: string;
   paymentMethod?: string;

@@ -31,9 +31,9 @@ export const Invoices: React.FC = () => {
   }, []);
 
   const filteredInvoices = invoices.filter(invoice => {
-    const customerName = invoice.customer?.name || 
-                        (typeof invoice.customerId === 'object' ? invoice.customerId.name : null) || 
-                        invoice.customerName || 
+    const customerName = invoice.customer?.name ||
+                        (invoice.customerId && typeof invoice.customerId === 'object' && (invoice.customerId as any)?.name ? (invoice.customerId as any).name : null) ||
+                        invoice.customerName ||
                         '';
     const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          invoice.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -143,14 +143,14 @@ export const Invoices: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {invoice.customer?.name || 
-                         (typeof invoice.customerId === 'object' ? invoice.customerId.name : null) || 
-                         invoice.customerName || 
+                        {invoice.customer?.name ||
+                         (invoice.customerId && typeof invoice.customerId === 'object' && (invoice.customerId as any)?.name ? (invoice.customerId as any).name : null) ||
+                         invoice.customerName ||
                          'N/A'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {invoice.customer?.phone || 
-                         (typeof invoice.customerId === 'object' ? invoice.customerId.phone : null) || 
+                        {invoice.customer?.phone ||
+                         (invoice.customerId && typeof invoice.customerId === 'object' && (invoice.customerId as any)?.phone ? (invoice.customerId as any).phone : null) ||
                          ''}
                       </div>
                     </td>
@@ -169,11 +169,11 @@ export const Invoices: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {new Date(invoice.date).toLocaleDateString()}
+                        {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
                       </div>
-                      {invoice.status === 'pending' && (
+                      {invoice.status === 'pending' && invoice.dueDate && new Date(invoice.dueDate) < new Date() && (
                         <div className="text-xs text-red-600 font-medium">
-                          Pending
+                          Overdue
                         </div>
                       )}
                     </td>

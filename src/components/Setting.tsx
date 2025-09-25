@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Save, User, Building, Bell, Shield, Database, Globe } from 'lucide-react';
+import { NotificationSettings } from './NotificationSettings';
 
 export const Setting: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -181,77 +182,7 @@ export const Setting: React.FC = () => {
             
             {activeTab === 'notifications' && (
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-medium text-gray-800">Notification Settings</h3>
-                  <button 
-                    onClick={handleSave}
-                    disabled={!formChanged}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg ${formChanged ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                  >
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </button>
-                </div>
-                
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-gray-700">Email Notifications</h4>
-                    
-                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                      <div>
-                        <p className="font-medium text-gray-800">Payment Received</p>
-                        <p className="text-sm text-gray-500">Get notified when a customer makes a payment</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked onChange={handleFormChange} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                    
-                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                      <div>
-                        <p className="font-medium text-gray-800">Invoice Due Reminder</p>
-                        <p className="text-sm text-gray-500">Get notified when an invoice is about to be due</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked onChange={handleFormChange} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                    
-                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                      <div>
-                        <p className="font-medium text-gray-800">New Customer</p>
-                        <p className="text-sm text-gray-500">Get notified when a new customer is added</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" onChange={handleFormChange} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-4">
-                    <h4 className="font-medium text-gray-700 mb-4">Notification Delivery</h4>
-                    
-                    <div className="space-y-3">
-                      <label className="flex items-center">
-                        <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4 mr-2" defaultChecked onChange={handleFormChange} />
-                        <span>Email</span>
-                      </label>
-                      
-                      <label className="flex items-center">
-                        <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4 mr-2" onChange={handleFormChange} />
-                        <span>SMS Text Message</span>
-                      </label>
-                      
-                      <label className="flex items-center">
-                        <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4 mr-2" defaultChecked onChange={handleFormChange} />
-                        <span>In-App Notifications</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                <NotificationSettings />
               </div>
             )}
             

@@ -16,6 +16,22 @@ export const CustomerList: React.FC = () => {
     setFilteredCustomers(customers);
   }, [customers]);
 
+  React.useEffect(() => {
+    // Listen for data change events (e.g., when transactions are deleted)
+    const handleDataChanged = (event: CustomEvent) => {
+      if (event.detail?.type === 'transaction' && event.detail?.action === 'delete') {
+        // Refresh customer data when transactions are deleted
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
+  }, []);
+
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete customer "${name}"?`)) {
       try {

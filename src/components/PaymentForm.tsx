@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTransactions, useCustomers } from '../hooks/useElectron';
 import type { Transaction, Customer } from '../types';
+import CustomerSelector from './CustomerSelector';
 
 interface PaymentFormProps {
   payment?: Transaction;
@@ -20,6 +21,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
     paymentMethod: payment?.paymentMethod || 'CASH',
     invoiceId: payment?.relatedTransactionId || ''
   });
+  const [selectedCustomer, setSelectedCustomer] = useState<Partial<Customer> | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +51,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
     });
   };
 
+  const handleCustomerChange = (customerId: string, customerData?: Partial<Customer>) => {
+    setFormData({
+      ...formData,
+      customerId: customerId,
+    });
+    setSelectedCustomer(customerData || null);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -69,21 +79,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
             <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-2">
               Customer *
             </label>
-            <select
-              id="customerId"
-              name="customerId"
-              required
+            <CustomerSelector
               value={formData.customerId}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select a customer</option>
-              {customers.map(customer => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name} - {customer.phone}
-                </option>
-              ))}
-            </select>
+              onChange={handleCustomerChange}
+              required
+              placeholder="Search or create customer"
+            />
           </div>
 
           <div>
