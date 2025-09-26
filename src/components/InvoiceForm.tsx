@@ -10,7 +10,7 @@ interface InvoiceFormProps {
 }
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) => {
-  const { createTransaction } = useTransactions();
+  const { createTransaction, updateTransaction } = useTransactions();
   const { customers } = useCustomers();
   const [loading, setLoading] = useState(false);
   
@@ -34,15 +34,21 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const invoiceData = {
         ...formData,
         type: 'invoice' as const, // Using 'invoice' from the backend enum values
         amount: parseFloat(formData.amount),
       };
-      
-      await createTransaction(invoiceData);
+
+      if (invoice?.id) {
+        // Update existing invoice
+        await updateTransaction(invoice.id, invoiceData);
+      } else {
+        // Create new invoice
+        await createTransaction(invoiceData);
+      }
       onClose();
     } catch (error) {
       console.error('Error saving invoice:', error);

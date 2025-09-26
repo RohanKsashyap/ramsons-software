@@ -137,6 +137,16 @@ export const useTransactions = () => {
     }
   };
 
+  const updateTransaction = async (id: string, transactionData: Partial<Transaction>) => {
+    try {
+      await apiService.transactions.update(id, transactionData);
+      await fetchTransactions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update transaction');
+      throw err;
+    }
+  };
+
   const makePayment = async (transactionId: string, amount: number) => {
     try {
       await apiService.transactions.makePayment(transactionId, amount);
@@ -157,6 +167,7 @@ export const useTransactions = () => {
     error,
     fetchTransactions,
     createTransaction,
+    updateTransaction,
     makePayment,
   };
 };

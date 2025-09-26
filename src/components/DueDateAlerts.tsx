@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { apiService } from '../services/api';
+import { audioService } from '../services/audioService';
 
 interface DueDateAlert {
   id: string;
@@ -19,6 +20,7 @@ interface DueDateAlert {
 
 export const DueDateAlerts: React.FC = () => {
   const [alerts, setAlerts] = useState<DueDateAlert[]>([]);
+  const [previousAlerts, setPreviousAlerts] = useState<DueDateAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +30,15 @@ export const DueDateAlerts: React.FC = () => {
       setError(null);
       const response = await apiService.transactions.getDueDateAlerts();
       if (response && response.success) {
-        setAlerts(response.data);
+        const newAlerts = response.data;
+        setAlerts(newAlerts);
+
+        // Play notification sounds for new alerts
+        if (newAlerts.length > 0 && hasNewAlerts(previousAlerts, newAlerts)) {
+          await playNotificationSounds(newAlerts);
+        }
+
+        setPreviousAlerts(newAlerts);
       } else {
         setError('Failed to fetch due date alerts');
       }
@@ -38,6 +48,36 @@ export const DueDateAlerts: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const hasNewAlerts = (prevAlerts: DueDateAlert[], newAlerts: DueDateAlert[]): boolean => {
+    if (prevAlerts.length === 0 && newAlerts.length > 0) {
+      // Initial load with alerts
+      return true;
+    }
+
+    if (newAlerts.length > prevAlerts.length) {
+      // More alerts than before
+      return true;
+    }
+
+    // Check for higher priority alerts
+    const getHighestPriority = (alerts: DueDateAlert[]) => {
+      if (alerts.length === 0) return 'low';
+      const priorities = alerts.map(alert => alert.priority);
+      const priorityOrder = ['urgent', 'high', 'medium', 'low'];
+      return priorities.reduce((highest, current) => {
+        const highestIndex = priorityOrder.indexOf(highest);
+        const currentIndex = priorityOrder.indexOf(current);
+        return currentIndex < highestIndex ? current : highest;
+      }, 'low');
+    };
+
+    const prevHighest = getHighestPriority(prevAlerts);
+    const newHighest = getHighestPriority(newAlerts);
+
+    const priorityOrder = ['urgent', 'high', 'medium', 'low'];
+    return priorityOrder.indexOf(newHighest) < priorityOrder.indexOf(prevHighest);
   };
 
   useEffect(() => {
@@ -61,6 +101,39 @@ export const DueDateAlerts: React.FC = () => {
       month: 'short',
       year: 'numeric'
     });
+  };
+
+  const playNotificationSounds = async (alerts: DueDateAlert[]) => {
+    if (alerts.length === 0) return;
+
+    // Determine the highest priority alert
+    const priorities = alerts.map(alert => alert.priority);
+    const priorityOrder = ['urgent', 'high', 'medium', 'low'];
+    const highestPriority = priorities.reduce((highest, current) => {
+      const highestIndex = priorityOrder.indexOf(highest);
+      const currentIndex = priorityOrder.indexOf(current);
+      return currentIndex < highestIndex ? current : highest;
+    }, 'low');
+
+    try {
+      switch (highestPriority) {
+        case 'urgent':
+          await audioService.playNotificationSound('urgent');
+          break;
+        case 'high':
+          await audioService.playNotificationSound('urgent');
+          break;
+        case 'medium':
+          await audioService.playNotificationSound('reminder');
+          break;
+        case 'low':
+        default:
+          await audioService.playNotificationSound('notification');
+          break;
+      }
+    } catch (error) {
+      console.error('Error playing notification sound:', error);
+    }
   };
 
   const getPriorityColor = (priority: string) => {

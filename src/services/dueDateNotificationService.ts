@@ -28,10 +28,10 @@ class DueDateNotificationService {
 
   // Start periodic checking for due dates
   startPeriodicCheck() {
-    // Check every 30 minutes
+    // Check every 5 minutes for more responsive notifications
     this.checkInterval = setInterval(() => {
       this.checkDueDates();
-    }, 30 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
     // Initial check after 5 seconds
     setTimeout(() => {
@@ -133,7 +133,8 @@ class DueDateNotificationService {
     if (typeof window !== 'undefined' && (window as any).addNotification) {
       const notification = this.createNotification(alert);
       (window as any).addNotification(notification);
-      // Sound is NOT played here; sounds are handled by backgroundNotificationService according to schedule
+      // Play sound immediately for due date alerts
+      await this.playNotificationSound(alert);
     }
   }
 

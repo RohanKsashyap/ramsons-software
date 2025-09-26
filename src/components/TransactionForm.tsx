@@ -10,7 +10,7 @@ interface TransactionFormProps {
 }
 
 export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, onClose }) => {
-  const { createTransaction } = useTransactions();
+  const { createTransaction, updateTransaction } = useTransactions();
   const { customers } = useCustomers();
   const [loading, setLoading] = useState(false);
   
@@ -43,7 +43,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, o
         dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : undefined,
       };
 
-      await createTransaction(transactionData);
+      if (transaction?.id) {
+        // Update existing transaction
+        await updateTransaction(transaction.id, transactionData);
+      } else {
+        // Create new transaction
+        await createTransaction(transactionData);
+      }
       onClose();
     } catch (error) {
       console.error('Error saving transaction:', error);
