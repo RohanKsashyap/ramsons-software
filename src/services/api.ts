@@ -1,14 +1,28 @@
+import { AuthResponse, ResetTokenResponse } from '../types';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
 
 class ApiService {
+  private token: string | null = null;
+
+  setToken(token: string | null) {
+    this.token = token;
+  }
+
   private async requestTo<T>(base: string, endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${base}${endpoint}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> | undefined),
+    };
+
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
       ...options,
+      headers,
     };
 
     try {
@@ -101,6 +115,26 @@ class ApiService {
   dashboard = {
     getStats: () => this.request<any>('/dashboard/stats'),
     getMonthlyRevenue: () => this.request<any>('/dashboard/monthly-revenue'),
+  };
+
+  // Authentication API
+  auth = {
+    login: (email: string, password: string) => this.request<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+    requestReset: (email: string) => this.request<ResetTokenResponse>('/auth/reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+    resetPassword: (email: string, token: string, newPassword: string) => this.request<AuthResponse>('/auth/reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ email, token, newPassword }),
+    }),
+    register: (email: string, password: string, name?: string) => this.request<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    }),
   };
 
   // Notification API

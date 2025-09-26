@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { LogIn, LogOut } from 'lucide-react';
+import { AuthModal } from './components/AuthModal';
+import { useAuth } from './hooks/useAuth';
 import { Calculator, CreditCard, IndianRupee, FileText, Home, PieChart, Settings, Users } from 'lucide-react';
 
 // Import all page components
@@ -15,6 +18,10 @@ import { dueDateNotificationService } from './services/dueDateNotificationServic
 import { backgroundNotificationService } from './services/backgroundNotificationService';
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'reset'>('login');
+
+  const { user, logout } = useAuth();
 
   // Initialize notification services
   useEffect(() => {
@@ -66,7 +73,36 @@ function App() {
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-md">
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-gray-800">Ramsons Accounting</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-800">Ramsons Accounting</h1>
+            {user ? (
+              <button
+                onClick={logout}
+                className="flex items-center space-x-1 rounded-md bg-red-500 px-2 py-1 text-sm text-white hover:bg-red-600"
+                title="Log out"
+              >
+                <LogOut size={16} />
+                <span>Logout</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthMode('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="flex items-center space-x-1 rounded-md bg-blue-500 px-2 py-1 text-sm text-white hover:bg-blue-600"
+                title="Log in"
+              >
+                <LogIn size={16} />
+                <span>Login</span>
+              </button>
+            )}
+          </div>
+          {user && (
+            <p className="mt-2 text-sm text-gray-600 truncate" title={user.email}>
+              Signed in as {user.email}
+            </p>
+          )}
         </div>
         <nav className="mt-4">
           <ul>
@@ -78,83 +114,130 @@ function App() {
                     window.location.hash = `#/${item.id}`;
                   }}
                   className={`flex items-center w-full px-4 py-2 text-left ${activeTab === item.id ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                  disabled={!user}
                 >
                   <span className="mr-3">{item.icon}</span>
-                  {item.label}
+                  <span>{item.label}</span>
                 </button>
               </li>
             ))}
           </ul>
         </nav>
+        {!user && (
+          <div className="border-t p-4 text-sm text-gray-600">
+            <p className="mb-2 font-semibold">Please log in</p>
+            <p className="mb-4">Login to access the dashboard, customers, transactions, and more.</p>
+            <button
+              onClick={() => {
+                setAuthMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              className="w-full rounded-md bg-blue-500 py-2 text-white hover:bg-blue-600"
+            >
+              Sign In
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-gray-800">
             {menuItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
           </h2>
+          <div className="text-sm text-gray-500">
+            {user ? `Welcome back, ${user.email}` : 'You are browsing as a guest'}
+          </div>
         </div>
 
-        {activeTab === 'dashboard' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
-            <Dashboard />
+        {!user ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
+            <h3 className="text-xl font-semibold text-gray-800">Login required</h3>
+            <p className="mt-3 text-gray-600">Please log in to manage customers, transactions, reports, and more features.</p>
+            <button
+              onClick={() => {
+                setAuthMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              className="mt-6 rounded-md bg-blue-500 px-6 py-2 text-white hover:bg-blue-600"
+            >
+              Sign in to continue
+            </button>
           </div>
-        )}
+        ) : (
+          <>
+            {activeTab === 'dashboard' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
+                <Dashboard />
+              </div>
+            )}
 
-        {activeTab === 'transactions' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Transactions</h2>
-            <Transactions />
-          </div>
-        )}
+            {activeTab === 'transactions' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Transactions</h2>
+                <Transactions />
+              </div>
+            )}
 
-        {activeTab === 'customers' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Customers</h2>
-            <Customers />
-          </div>
-        )}
+            {activeTab === 'customers' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Customers</h2>
+                <Customers />
+              </div>
+            )}
 
-        {activeTab === 'invoices' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Invoices</h2>
-            <Invoices />
-          </div>
-        )}
+            {activeTab === 'invoices' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Invoices</h2>
+                <Invoices />
+              </div>
+            )}
 
-        {activeTab === 'reports' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Reports</h2>
-            <Reports />
-          </div>
-        )}
+            {activeTab === 'reports' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Reports</h2>
+                <Reports />
+              </div>
+            )}
 
-        {activeTab === 'calculator' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Calculator</h2>
-            <CalculatorComponent />
-          </div>
-        )}
+            {activeTab === 'calculator' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Calculator</h2>
+                <CalculatorComponent />
+              </div>
+            )}
 
-        {activeTab === 'payments' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Payments</h2>
-            <Payments />
-          </div>
-        )}
+            {activeTab === 'payments' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Payments</h2>
+                <Payments />
+              </div>
+            )}
 
-        {activeTab === 'settings' && (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Settings</h2>
-            <Setting />
-          </div>
+            {activeTab === 'settings' && (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Settings</h2>
+                <Setting />
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {/* Notification Manager */}
       <NotificationManager maxNotifications={5} position="top-right" />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        mode={authMode}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSwitchMode={(modeValue) => {
+          setAuthMode(modeValue);
+          setIsAuthModalOpen(true);
+        }}
+      />
     </div>
   );
 }
