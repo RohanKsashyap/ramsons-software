@@ -61,9 +61,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-gray-200 bg-white">
+          <h2 className="text-2xl font-semibold text-gray-900">
             {payment ? 'Edit Payment' : 'Record New Payment'}
           </h2>
           <button
@@ -74,9 +74,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-2">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+          <div className="rounded-lg border border-gray-200 bg-white/80 p-5 shadow-sm">
+            <label htmlFor="customerId" className="block text-sm font-semibold text-gray-800 mb-3">
               Customer *
             </label>
             <CustomerSelector
@@ -87,8 +87,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
             />
           </div>
 
-          <div>
-            <label htmlFor="invoiceId" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="rounded-lg border border-gray-200 bg-white/80 p-5 shadow-sm">
+            <label htmlFor="invoiceId" className="block text-sm font-semibold text-gray-800 mb-3">
               Related Invoice (Optional)
             </label>
             <input
@@ -97,13 +97,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
               name="invoiceId"
               value={formData.invoiceId}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter invoice ID"
             />
           </div>
 
-          <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="rounded-lg border border-gray-200 bg-white/80 p-5 shadow-sm">
+            <label htmlFor="amount" className="block text-sm font-semibold text-gray-800 mb-3">
               Payment Amount *
             </label>
             <input
@@ -115,13 +115,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
               step="0.01"
               value={formData.amount}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter amount"
             />
           </div>
 
-          <div>
-            <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="rounded-lg border border-gray-200 bg-white/80 p-5 shadow-sm">
+            <label htmlFor="paymentMethod" className="block text-sm font-semibold text-gray-800 mb-3">
               Payment Method *
             </label>
             <select
@@ -130,7 +130,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
               required
               value={formData.paymentMethod}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="CASH">Cash</option>
               <option value="CREDIT">Credit Card</option>
@@ -138,8 +138,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
             </select>
           </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="rounded-lg border border-gray-200 bg-white/80 p-5 shadow-sm">
+            <label htmlFor="description" className="block text-sm font-semibold text-gray-800 mb-3">
               Description
             </label>
             <textarea
@@ -148,23 +148,23 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
               rows={3}
               value={formData.description}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter payment description"
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 pt-4 sm:pt-6">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors disabled:bg-blue-300"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors disabled:bg-blue-300"
             >
               {loading ? 'Saving...' : 'Save Payment'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 px-4 rounded-lg transition-colors"
             >
               Cancel
             </button>

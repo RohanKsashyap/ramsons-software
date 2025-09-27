@@ -145,9 +145,9 @@ export const NotificationSettings: React.FC = () => {
           </h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Sound Toggle */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               {soundEnabled ? <Volume2 className="h-5 w-5 text-green-600" /> : <VolumeX className="h-5 w-5 text-gray-400" />}
               <span className="text-sm font-medium text-gray-700">Sound Notifications</span>
@@ -170,7 +170,7 @@ export const NotificationSettings: React.FC = () => {
           </div>
 
           {/* Volume Control */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Volume2 className="h-5 w-5 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">Volume</span>
             <input
@@ -180,13 +180,13 @@ export const NotificationSettings: React.FC = () => {
               step="0.1"
               value={volume}
               onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              className="flex-1 min-w-[160px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
             />
             <span className="text-sm text-gray-500 w-8">{Math.round(volume * 100)}%</span>
           </div>
 
           {/* Test Sounds */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-gray-700">Test:</span>
             <button
               onClick={() => handleTestSound('notification')}
