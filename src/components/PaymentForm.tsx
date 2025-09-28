@@ -7,9 +7,10 @@ import CustomerSelector from './CustomerSelector';
 interface PaymentFormProps {
   payment?: Transaction;
   onClose: () => void;
+  onSave?: () => Promise<void> | void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose, onSave }) => {
   const { createTransaction } = useTransactions();
   const { customers } = useCustomers();
   const [loading, setLoading] = useState(false);
@@ -21,6 +22,18 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
     paymentMethod: payment?.paymentMethod || 'CASH',
     invoiceId: payment?.relatedTransactionId || ''
   });
+
+  useEffect(() => {
+    if (payment) {
+      setFormData({
+        customerId: typeof payment.customerId === 'string' ? payment.customerId : payment.customerId?._id || '',
+        amount: payment.amount?.toString() || '',
+        description: payment.description || '',
+        paymentMethod: payment.paymentMethod || 'CASH',
+        invoiceId: payment.relatedTransactionId || ''
+      });
+    }
+  }, [payment]);
   const [selectedCustomer, setSelectedCustomer] = useState<Partial<Customer> | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,12 +43,24 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onClose }) =>
     try {
       const paymentData = {
         ...formData,
-        type: 'payment', // Using 'payment' from the backend enum values
+        type: 'payment',
         amount: parseFloat(formData.amount),
-        status: 'completed', // Using 'completed' from the backend enum values
+        status: 'completed',
       };
       
       await createTransaction(paymentData);
+
+      if (onSave) {
+        await onSave();
+      }
+
+      if (typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          message: payment ? 'Payment updated successfully.' : 'Payment recorded successfully.',
+          type: 'success'
+        });
+      }
+
       onClose();
     } catch (error) {
       console.error('Error saving payment:', error);

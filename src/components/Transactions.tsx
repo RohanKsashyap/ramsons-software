@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IndianRupee, Search, Filter, Plus, Trash2, Edit, Eye } from 'lucide-react';
 import type { Transaction } from '../types';
 import { apiService } from '../services/api';
@@ -15,34 +15,34 @@ export const Transactions: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const fetchTransactions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response: any = await apiService.transactions.getAll();
+      if (response && response.success) {
+        setTransactions(response.data);
+      } else if (Array.isArray(response)) {
+        setTransactions(response);
+      } else {
+        console.error('Failed to fetch transactions data');
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    // Check URL parameters for action=new
     const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
     if (urlParams.get('action') === 'new') {
       setShowForm(true);
     }
-    
-    const fetchTransactions = async () => {
-      try {
-        setLoading(true);
-        // Fetch transactions from API
-        const response: any = await apiService.transactions.getAll();
-        if (response && response.success) {
-          setTransactions(response.data);
-        } else {
-          // Handle API failure
-          console.error('Failed to fetch transactions data');
-          setTransactions([]);
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-        setLoading(false);
-      }
-    };
 
     fetchTransactions();
-  }, []);
+  }, [fetchTransactions]);
 
   const handleSelectTransaction = (transactionId: string) => {
     setSelectedTransactions(prev => 
@@ -64,20 +64,18 @@ export const Transactions: React.FC = () => {
     try {
       setDeleting(true);
       await apiService.transactions.delete(transactionId);
-      // Dispatch custom event to notify other components to refresh data
       window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'transaction', action: 'delete' } }));
-      // Refresh the transactions list
-      const fetchTransactions = async () => {
-        try {
-          const response: any = await apiService.transactions.getAll();
-          if (response && response.success) {
-            setTransactions(response.data);
-          }
-        } catch (error) {
-          console.error('Error refreshing transactions:', error);
-        }
-      };
       await fetchTransactions();
+
+      if (typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'info',
+          title: 'Transaction Deleted',
+          message: 'The transaction was removed successfully.',
+          priority: 'low',
+          autoClose: true,
+        });
+      }
     } catch (error) {
       console.error('Error deleting transaction:', error);
       alert('Failed to delete transaction');
@@ -90,22 +88,20 @@ export const Transactions: React.FC = () => {
     try {
       setDeleting(true);
       await apiService.transactions.deleteMultiple(selectedTransactions);
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'transaction', action: 'delete', count: selectedTransactions.length } }));
+      await fetchTransactions();
       setSelectedTransactions([]);
       setShowDeleteConfirm(false);
-      // Dispatch custom event to notify other components to refresh data
-      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'transaction', action: 'delete', count: selectedTransactions.length } }));
-      // Refresh the transactions list
-      const fetchTransactions = async () => {
-        try {
-          const response: any = await apiService.transactions.getAll();
-          if (response && response.success) {
-            setTransactions(response.data);
-          }
-        } catch (error) {
-          console.error('Error refreshing transactions:', error);
-        }
-      };
-      await fetchTransactions();
+
+      if (typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'info',
+          title: 'Transactions Deleted',
+          message: `${selectedTransactions.length} transaction(s) removed successfully.`,
+          priority: 'low',
+          autoClose: true,
+        });
+      }
     } catch (error) {
       console.error('Error deleting transactions:', error);
       alert('Failed to delete transactions');
@@ -339,6 +335,7 @@ export const Transactions: React.FC = () => {
             setShowForm(false);
             setEditingTransaction(null);
           }}
+          onSave={fetchTransactions}
         />
       )}
 

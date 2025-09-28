@@ -12,24 +12,26 @@ export const Payments: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Transaction | null>(null);
 
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setLoading(true);
-        const response = await apiService.transactions.getAll();
-        const all = (response as any)?.data || response || [];
-        const paymentOnly: Transaction[] = Array.isArray(all) ? all.filter((t: any) => (t.type === 'PAYMENT' || t.type === 'payment')) : [];
-        setPayments(paymentOnly);
-      } catch (error) {
-        console.error('Error fetching payments:', error);
-        setPayments([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPayments();
+  const fetchPayments = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.transactions.getAll();
+      const all = (response as any)?.data || response || [];
+      const paymentOnly: Transaction[] = Array.isArray(all)
+        ? all.filter((t: any) => (t.type === 'PAYMENT' || t.type === 'payment'))
+        : [];
+      setPayments(paymentOnly);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
 
   const filteredPayments = payments.filter(payment => {
     const customerName = payment.customer?.name ||
@@ -55,6 +57,24 @@ export const Payments: React.FC = () => {
       default:
         return <IndianRupee className="h-4 w-4 text-gray-600" />;
     }
+  };
+
+  useEffect(() => {
+    const handleDataChanged = (event: CustomEvent<{ entity: string }>) => {
+      if (event.detail.entity === 'payment') {
+        fetchPayments();
+      }
+    };
+
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
+  }, [fetchPayments]);
+
+  const handlePaymentSaved = async () => {
+    await fetchPayments();
   };
 
   if (loading) {
@@ -95,7 +115,10 @@ export const Payments: React.FC = () => {
           </div>
           
           <button 
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingPayment(null);
+              setShowForm(true);
+            }}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -238,6 +261,7 @@ export const Payments: React.FC = () => {
             setShowForm(false);
             setEditingPayment(null);
           }}
+          onSave={handlePaymentSaved}
         />
       )}
     </div>

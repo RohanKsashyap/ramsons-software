@@ -7,9 +7,10 @@ import CustomerSelector from './CustomerSelector';
 interface InvoiceFormProps {
   invoice?: Transaction;
   onClose: () => void;
+  onSave?: () => Promise<void> | void;
 }
 
-export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) => {
+export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose, onSave }) => {
   const { createTransaction, updateTransaction } = useTransactions();
   const { customers } = useCustomers();
   const [loading, setLoading] = useState(false);
@@ -21,15 +22,25 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
     return date.toISOString().split('T')[0];
   };
 
-  const [formData, setFormData] = useState({
-    customerId: invoice?.customerId || '',
-    amount: invoice?.amount?.toString() || '',
-    description: invoice?.description || '',
-    paymentMethod: invoice?.paymentMethod || 'credit',
-    dueDate: invoice?.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : getDefaultDueDate(),
-    status: invoice?.status || 'pending'
+  const buildFormState = (currentInvoice?: Transaction) => ({
+    customerId: typeof currentInvoice?.customerId === 'string'
+      ? currentInvoice.customerId
+      : currentInvoice?.customerId?._id || '',
+    amount: currentInvoice?.amount?.toString() || '',
+    description: currentInvoice?.description || '',
+    paymentMethod: currentInvoice?.paymentMethod || 'credit',
+    dueDate: currentInvoice?.dueDate
+      ? new Date(currentInvoice.dueDate).toISOString().split('T')[0]
+      : getDefaultDueDate(),
+    status: currentInvoice?.status || 'pending'
   });
+
+  const [formData, setFormData] = useState(buildFormState(invoice));
   const [selectedCustomer, setSelectedCustomer] = useState<Partial<Customer> | null>(null);
+
+  useEffect(() => {
+    setFormData(buildFormState(invoice));
+  }, [invoice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +53,28 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onClose }) =>
         amount: parseFloat(formData.amount),
       };
 
-      if (invoice?.id) {
-        // Update existing invoice
-        await updateTransaction(invoice.id, invoiceData);
+      if (invoice?.id || invoice?._id) {
+        const targetId = invoice.id || invoice._id;
+        if (targetId) {
+          // Update existing invoice
+          await updateTransaction(targetId, invoiceData);
+        }
       } else {
         // Create new invoice
         await createTransaction(invoiceData);
       }
+
+      if (onSave) {
+        await onSave();
+      }
+
+      if (typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          message: invoice ? 'Invoice updated successfully.' : 'Invoice created successfully.',
+          type: 'success',
+        });
+      }
+
       onClose();
     } catch (error) {
       console.error('Error saving invoice:', error);

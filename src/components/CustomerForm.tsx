@@ -6,7 +6,7 @@ import type { Customer } from '../types';
 interface CustomerFormProps {
   customer?: Customer | null;
   onClose: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void> | void;
 }
 
 export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, onSave }) => {
@@ -29,7 +29,18 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, o
       } else {
         await createCustomer(formData);
       }
-      onSave();
+
+      if (typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'info',
+          title: customer ? 'Customer Updated' : 'Customer Added',
+          message: `${formData.name} has been ${customer ? 'updated' : 'added'} successfully.`,
+          priority: 'low',
+          autoClose: true,
+        });
+      }
+
+      await Promise.resolve(onSave());
       onClose();
     } catch (error) {
       alert('Failed to save customer');

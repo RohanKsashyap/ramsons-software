@@ -6,7 +6,7 @@ import { CustomerForm } from './CustomerForm';
 import { apiService } from '../services/api';
 
 export const Customers: React.FC = () => {
-  const { customers, loading, error } = useCustomers();
+  const { customers, loading, error, fetchCustomers } = useCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [showForm, setShowForm] = useState(false);
@@ -26,7 +26,7 @@ export const Customers: React.FC = () => {
     const handleDataChanged = (event: CustomEvent) => {
       if (event.detail?.type === 'transaction' && event.detail?.action === 'delete') {
         // Refresh customer data when transactions are deleted
-        window.location.reload();
+        fetchCustomers();
       }
     };
 
@@ -35,7 +35,7 @@ export const Customers: React.FC = () => {
     return () => {
       window.removeEventListener('dataChanged', handleDataChanged as EventListener);
     };
-  }, []);
+  }, [fetchCustomers]);
 
   const handleCloseForm = () => {
     setShowForm(false);
@@ -67,10 +67,8 @@ export const Customers: React.FC = () => {
     try {
       setDeleting(true);
       await apiService.customers.delete(customerId);
-      // Dispatch custom event to notify other components to refresh data
       window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'customer', action: 'delete' } }));
-      // Refresh the customers list
-      window.location.reload();
+      await fetchCustomers();
     } catch (error) {
       console.error('Error deleting customer:', error);
       alert('Failed to delete customer');
@@ -83,12 +81,10 @@ export const Customers: React.FC = () => {
     try {
       setDeleting(true);
       await apiService.customers.deleteMultiple(selectedCustomers);
+      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'customer', action: 'delete', count: selectedCustomers.length } }));
+      await fetchCustomers();
       setSelectedCustomers([]);
       setShowDeleteConfirm(false);
-      // Dispatch custom event to notify other components to refresh data
-      window.dispatchEvent(new CustomEvent('dataChanged', { detail: { type: 'customer', action: 'delete', count: selectedCustomers.length } }));
-      // Refresh the customers list
-      window.location.reload();
     } catch (error) {
       console.error('Error deleting customers:', error);
       alert('Failed to delete customers');
@@ -266,7 +262,10 @@ export const Customers: React.FC = () => {
         <CustomerForm
           customer={editingCustomer}
           onClose={handleCloseForm}
-          onSave={handleCloseForm}
+          onSave={async () => {
+            await fetchCustomers();
+            handleCloseForm();
+          }}
         />
       )}
 

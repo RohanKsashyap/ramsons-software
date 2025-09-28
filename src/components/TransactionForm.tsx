@@ -7,9 +7,10 @@ import CustomerSelector from './CustomerSelector';
 interface TransactionFormProps {
   transaction?: Transaction;
   onClose: () => void;
+  onSave?: () => Promise<void> | void;
 }
 
-export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, onClose }) => {
+export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, onClose, onSave }) => {
   const { createTransaction, updateTransaction } = useTransactions();
   const { customers } = useCustomers();
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,22 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ transaction, o
         // Create new transaction
         await createTransaction(transactionData);
       }
+
+      if (typeof window !== 'undefined' && (window as any).addNotification) {
+        (window as any).addNotification({
+          type: transaction ? 'info' : 'payment_received',
+          title: transaction ? 'Transaction Updated' : 'Transaction Created',
+          message: transaction ? 'Transaction details updated successfully.' : 'New transaction recorded successfully.',
+          customerName: selectedCustomer?.name,
+          priority: 'low',
+          autoClose: true,
+        });
+      }
+
+      if (onSave) {
+        await Promise.resolve(onSave());
+      }
+
       onClose();
     } catch (error) {
       console.error('Error saving transaction:', error);

@@ -12,23 +12,44 @@ export const Invoices: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Transaction | null>(null);
 
+  const fetchInvoices = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response: any = await apiService.transactions.getAll();
+      const transactionsData = response?.success ? response.data : Array.isArray(response) ? response : [];
+      const invoiceData = transactionsData.filter((transaction: Transaction) =>
+        transaction.type === 'invoice' || transaction.type === 'INVOICE'
+      );
+      setInvoices(invoiceData);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const response: any = await apiService.transactions.getAll();
-        const transactionsData = response.success ? response.data : [];
-        // Filter only invoice type transactions
-        const invoiceData = transactionsData.filter((transaction: Transaction) => transaction.type === 'invoice');
-        setInvoices(invoiceData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching invoices:', error);
-        setLoading(false);
+    fetchInvoices();
+  }, [fetchInvoices]);
+
+  useEffect(() => {
+    const handleDataChanged = (event: CustomEvent<{ entity: string }>) => {
+      if (event.detail.entity === 'invoice') {
+        fetchInvoices();
       }
     };
 
-    fetchInvoices();
-  }, []);
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
+  }, [fetchInvoices]);
+
+  const handleInvoiceSaved = async () => {
+    await fetchInvoices();
+  };
 
   const filteredInvoices = invoices.filter(invoice => {
     const customerName = invoice.customer?.name ||
@@ -97,7 +118,10 @@ export const Invoices: React.FC = () => {
           </div>
           
           <button 
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingInvoice(null);
+              setShowForm(true);
+            }}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -226,6 +250,7 @@ export const Invoices: React.FC = () => {
             setShowForm(false);
             setEditingInvoice(null);
           }}
+          onSave={handleInvoiceSaved}
         />
       )}
     </div>
