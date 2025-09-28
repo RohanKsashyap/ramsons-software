@@ -3,19 +3,19 @@ import { AlertCircle, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { apiService } from '../services/api';
 import { audioService } from '../services/audioService';
 
+import type { Customer } from '../types';
+
 interface DueDateAlert {
   id: string;
   customerName: string;
   amount: number;
+  originalAmount?: number;
   dueDate: string;
   alertType: 'overdue' | 'due_soon';
   daysUntilDue?: number;
   daysOverdue?: number;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  customer?: {
-    name: string;
-    phone: string;
-  };
+  customer?: Pick<Customer, 'name' | 'phone' | 'balance' | 'totalCredit' | 'totalPaid'>;
 }
 
 export const DueDateAlerts: React.FC = () => {
@@ -101,6 +101,17 @@ export const DueDateAlerts: React.FC = () => {
       month: 'short',
       year: 'numeric'
     });
+  };
+
+  const getAmountLabel = (alert: DueDateAlert) => {
+    const balance = alert.amount;
+    const original = alert.originalAmount ?? alert.amount;
+
+    if (Math.abs(balance - original) < 0.01) {
+      return `${formatAmount(balance)} ${alert.alertType === 'overdue' ? 'overdue' : 'due'}`;
+    }
+
+    return `${formatAmount(balance)} balance of ${formatAmount(original)}`;
   };
 
   const playNotificationSounds = async (alerts: DueDateAlert[]) => {
@@ -244,7 +255,7 @@ export const DueDateAlerts: React.FC = () => {
                       </div>
                       
                       <p className="text-sm text-gray-600 mb-2">
-                        {formatAmount(alert.amount)} • Due {formatDate(alert.dueDate)}
+                        {getAmountLabel(alert)} • Due {formatDate(alert.dueDate)}
                       </p>
                       
                       <p className="text-sm font-medium">

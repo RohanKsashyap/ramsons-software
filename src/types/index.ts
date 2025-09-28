@@ -95,7 +95,11 @@ export interface Transaction {
     _id: string;
     name: string;
     phone: string;
+    balance?: number;
+    totalCredit?: number;
+    totalPaid?: number;
   };
+  originalAmount?: number;
 }
 
 export * from './auth';
